@@ -129,6 +129,307 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Drawdown Comparison Chart -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <div id="drawdownChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprehensive Trading Metrics Table -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h4 class="mb-3">📊 Detailed Trading Metrics</h4>
+                        <div class="row">
+                            <!-- Performance Metrics -->
+                            <div class="col-md-4">
+                                <h6 class="text-primary mb-3">
+                                    💰 Performance Metrics
+                                </h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Total Return</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.return_pct >= 0 %}text-success{% else %}text-danger{% endif %}"
+                                        >
+                                            {{
+                                            "{:+.2f}%".format(stats.return_pct)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total P&L</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}"
+                                        >
+                                            ${{
+                                            "{:,.2f}".format(stats.total_pnl) }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Largest Win</td>
+                                        <td class="text-end text-success">
+                                            ${{
+                                            "{:,.2f}".format(stats.largest_win)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Largest Loss</td>
+                                        <td class="text-end text-danger">
+                                            ${{
+                                            "{:,.2f}".format(stats.largest_loss)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Avg Win</td>
+                                        <td class="text-end text-success">
+                                            ${{ "{:,.2f}".format(stats.avg_win)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Avg Loss</td>
+                                        <td class="text-end text-danger">
+                                            ${{ "{:,.2f}".format(stats.avg_loss)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Profit Factor</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.profit_factor >= 1.5 %}text-success{% elif stats.profit_factor >= 1 %}text-warning{% else %}text-danger{% endif %}"
+                                        >
+                                            {{
+                                            "{:.2f}".format(stats.profit_factor)
+                                            }}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Risk Metrics -->
+                            <div class="col-md-4">
+                                <h6 class="text-warning mb-3">
+                                    ⚠️ Risk Metrics
+                                </h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Max Drawdown</td>
+                                        <td
+                                            class="text-end fw-bold text-danger"
+                                        >
+                                            ${{
+                                            "{:,.2f}".format(stats.max_drawdown)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sharpe Ratio (Portfolio)</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.sharpe_ratio >= 1 %}text-success{% elif stats.sharpe_ratio >= 0 %}text-warning{% else %}text-danger{% endif %}"
+                                        >
+                                            {{
+                                            "{:.2f}".format(stats.sharpe_ratio)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sharpe Ratio (BTC)</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.btc_sharpe_ratio >= 1 %}text-success{% elif stats.btc_sharpe_ratio >= 0 %}text-warning{% else %}text-danger{% endif %}"
+                                        >
+                                            {{
+                                            "{:.2f}".format(stats.btc_sharpe_ratio)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Sharpe Advantage</td>
+                                        <td
+                                            class="text-end fw-bold {% if (stats.sharpe_ratio - stats.btc_sharpe_ratio) > 0 %}text-success{% elif (stats.sharpe_ratio - stats.btc_sharpe_ratio) < 0 %}text-danger{% else %}text-secondary{% endif %}"
+                                        >
+                                            {% if (stats.sharpe_ratio -
+                                            stats.btc_sharpe_ratio) > 0 %} +{{
+                                            "{:.2f}".format(stats.sharpe_ratio -
+                                            stats.btc_sharpe_ratio) }} {% elif
+                                            (stats.sharpe_ratio -
+                                            stats.btc_sharpe_ratio) < 0 %} {{
+                                            "{:.2f}".format(stats.sharpe_ratio -
+                                            stats.btc_sharpe_ratio) }} {% else
+                                            %} {{
+                                            "{:.2f}".format(stats.sharpe_ratio -
+                                            stats.btc_sharpe_ratio) }} {% endif
+                                            %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Recovery Factor</td>
+                                        <td
+                                            class="text-end {% if stats.recovery_factor >= 2 %}text-success{% elif stats.recovery_factor >= 1 %}text-warning{% else %}text-danger{% endif %}"
+                                        >
+                                            {{
+                                            "{:.2f}".format(stats.recovery_factor)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Reward:Risk Ratio</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.reward_risk_ratio >= 2 %}text-success{% elif stats.reward_risk_ratio >= 1.5 %}text-warning{% else %}text-danger{% endif %}"
+                                        >
+                                            {{
+                                            "{:.2f}:1".format(stats.reward_risk_ratio)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Win Rate</td>
+                                        <td
+                                            class="text-end fw-bold {% if stats.win_rate >= 60 %}text-success{% elif stats.win_rate >= 40 %}text-warning{% else %}text-danger{% endif %}"
+                                        >
+                                            {{ "{:.1f}%".format(stats.win_rate)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Max Consecutive Wins</td>
+                                        <td class="text-end text-success">
+                                            {{ stats.max_consecutive_wins }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Max Consecutive Losses</td>
+                                        <td class="text-end text-danger">
+                                            {{ stats.max_consecutive_losses }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Avg Daily P&L</td>
+                                        <td
+                                            class="text-end {% if stats.avg_daily_pnl >= 0 %}text-success{% else %}text-danger{% endif %}"
+                                        >
+                                            ${{
+                                            "{:,.2f}".format(stats.avg_daily_pnl)
+                                            }}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Trading Activity -->
+                            <div class="col-md-4">
+                                <h6 class="text-info mb-3">
+                                    📈 Trading Activity
+                                </h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Strategy Start</strong></td>
+                                        <td
+                                            class="text-end fw-bold text-primary"
+                                        >
+                                            {{ stats.strategy_start_date }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Strategy End</strong></td>
+                                        <td
+                                            class="text-end fw-bold text-primary"
+                                        >
+                                            {{ stats.strategy_end_date }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Trading Days</td>
+                                        <td class="text-end">
+                                            {{ stats.trading_days }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Trades</td>
+                                        <td class="text-end fw-bold">
+                                            {{ stats.total_trades }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Winning Trades</td>
+                                        <td class="text-end text-success">
+                                            {{ stats.profitable_trades }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Losing Trades</td>
+                                        <td class="text-end text-danger">
+                                            {{ stats.losing_trades }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Trades per Day</td>
+                                        <td class="text-end">
+                                            {{
+                                            "{:.1f}".format(stats.trades_per_day)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Volume</td>
+                                        <td class="text-end">
+                                            ${{
+                                            "{:,.0f}".format(stats.total_volume)
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Avg Trade Size</td>
+                                        <td class="text-end">
+                                            ${{
+                                            "{:,.0f}".format(stats.avg_trade_size)
+                                            }}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Performance Rating -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div
+                                    class="alert {% if stats.profit_factor >= 1.5 and stats.win_rate >= 50 and stats.sharpe_ratio >= 1 %}alert-success{% elif stats.profit_factor >= 1 and stats.win_rate >= 40 %}alert-warning{% else %}alert-danger{% endif %} text-center"
+                                >
+                                    <h6 class="mb-1">
+                                        {% if stats.profit_factor >= 1.5 and
+                                        stats.win_rate >= 50 and
+                                        stats.sharpe_ratio >= 1 %} 🏆
+                                        <strong>Excellent Performance</strong> -
+                                        Strong risk-adjusted returns {% elif
+                                        stats.profit_factor >= 1 and
+                                        stats.win_rate >= 40 %} ⚡
+                                        <strong>Good Performance</strong> -
+                                        Solid trading with room for improvement
+                                        {% else %} 🔴
+                                        <strong>Needs Improvement</strong> -
+                                        Consider reviewing strategy {% endif %}
+                                    </h6>
+                                    <small>
+                                        Profit Factor: {{
+                                        "{:.2f}".format(stats.profit_factor) }}
+                                        | Win Rate: {{
+                                        "{:.1f}%".format(stats.win_rate) }} |
+                                        Sharpe: {{
+                                        "{:.2f}".format(stats.sharpe_ratio) }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script>
@@ -143,6 +444,11 @@
             // Render Percentage Returns Comparison Chart
             {% if percentage_chart %}
             Plotly.newPlot('percentageChart', {{ percentage_chart | safe }});
+            {% endif %}
+
+            // Render Drawdown Comparison Chart
+            {% if drawdown_chart %}
+            Plotly.newPlot('drawdownChart', {{ drawdown_chart | safe }});
             {% endif %}
         </script>
     </body>
