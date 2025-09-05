@@ -140,7 +140,7 @@ def create_pnl_chart(df, days_back):
     return fig
 
 def create_btc_compare_pnl_chart(df, days_back):
-    """Create comparison chart between PnL and BTC performance - same format as portfolio chart"""
+    """Create comparison chart between PnL and BTC performance for exact same period"""
     if df.empty:
         return go.Figure().add_annotation(text="No PnL data", x=0.5, y=0.5, showarrow=False)
 
@@ -157,90 +157,72 @@ def create_btc_compare_pnl_chart(df, days_back):
 
     fig = go.Figure()
 
-    # Portfolio data - same as original PnL chart (trade numbers and dollar values)
-    pnl_x_data = [0] + df['trade_number'].tolist()
-    pnl_y_data = [0] + df['cumulative_pnl'].tolist()
+    # Prepare PnL data with timestamps (not trade numbers)
+    df_with_zero = pd.concat([
+        pd.DataFrame({'timestamp': [start_date], 'cumulative_pnl': [0]}),
+        df[['timestamp', 'cumulative_pnl']]
+    ]).reset_index(drop=True)
 
-    # BTC data - calculate what $1000 invested at start would be worth
+    # Calculate PnL percentage returns
+    initial_balance = 1000  # Assume $1000 initial balance
+    pnl_pct = (df_with_zero['cumulative_pnl'] / initial_balance) * 100
+
+    # Prepare BTC data - calculate percentage returns from the start of portfolio period
     btc_data_sorted = btc_data.sort_index()
     first_btc_price = btc_data_sorted['close'].iloc[0]
+    btc_returns = ((btc_data_sorted['close'] / first_btc_price) - 1) * 100
 
-    # Assume $1000 initial investment in BTC at start of trading period
-    initial_investment = 1000
-    btc_quantity = initial_investment / first_btc_price
-
-    # Calculate BTC portfolio value over time, mapped to trade numbers
-    btc_values = []
-    trade_timestamps = df['timestamp'].tolist()
-
-    # Start with $1000 at trade 0
-    btc_values.append(initial_investment)
-
-    # For each trade, find the nearest BTC price and calculate portfolio value
-    for trade_time in trade_timestamps:
-        # Find the BTC price closest to this trade time
-        time_diffs = abs(btc_data_sorted.index - trade_time)
-        closest_idx = time_diffs.argmin()  # Use argmin instead of idxmin
-        closest_time = btc_data_sorted.index[closest_idx]
-        btc_price_at_trade = btc_data_sorted.loc[closest_time, 'close']
-        btc_portfolio_value = btc_quantity * btc_price_at_trade
-        btc_values.append(btc_portfolio_value)
-
-    # Convert BTC values to P&L (relative to initial $1000)
-    btc_pnl = [value - initial_investment for value in btc_values]
-    btc_x_data = list(range(len(btc_pnl)))
-
-    # Add Portfolio trace
+    # Add Portfolio trace (using timestamp)
     fig.add_trace(go.Scatter(
-        x=pnl_x_data,
-        y=pnl_y_data,
-        mode='lines',
+        x=df_with_zero['timestamp'],
+        y=pnl_pct,
+        mode='lines+markers',
         name='Your Portfolio',
         line=dict(color='#10B981', width=3),
-        fill='tozeroy',
-        fillcolor='rgba(16, 185, 129, 0.15)',
-        hovertemplate='Trade #%{x}<br>Portfolio P&L: $%{y:.2f}<extra></extra>'
+        marker=dict(size=4),
+        hovertemplate='%{x}<br>Portfolio Return: %{y:.2f}%<extra></extra>'
     ))
 
-    # Add BTC HODL trace
+    # Add BTC trace (using timestamp)
     fig.add_trace(go.Scatter(
-        x=btc_x_data,
-        y=btc_pnl,
+        x=btc_data_sorted.index,
+        y=btc_returns,
         mode='lines',
-        name='BTC HODL ($1000)',
+        name='BTC (HODL)',
         line=dict(color='#F59E0B', width=2, dash='dash'),
-        hovertemplate='Trade #%{x}<br>BTC P&L: $%{y:.2f}<extra></extra>'
+        hovertemplate='%{x}<br>BTC Return: %{y:.2f}%<extra></extra>'
     ))
 
     # Add zero line
     fig.add_hline(y=0, line_dash="dot", line_color="#9CA3AF", opacity=0.7)
 
-    # Calculate final values for title
-    final_portfolio_pnl = pnl_y_data[-1] if pnl_y_data else 0
-    final_btc_pnl = btc_pnl[-1] if btc_pnl else 0
+    # Calculate final returns for title
+    final_pnl_pct = pnl_pct.iloc[-1] if len(pnl_pct) > 0 else 0
+    final_btc_pct = btc_returns.iloc[-1] if len(btc_returns) > 0 else 0
 
-    # Determine outperformance in dollars
-    outperform = final_portfolio_pnl - final_btc_pnl
-    outperform_text = f"📈 +${outperform:.2f}" if outperform > 0 else f"📉 ${outperform:.2f}"
+    # Determine outperformance
+    outperform = final_pnl_pct - final_btc_pct
+    outperform_text = f"📈 +{outperform:.1f}%" if outperform > 0 else f"📉 {outperform:.1f}%"
 
     # Calculate actual days between first and last trade
     actual_days = (end_date - start_date).days
-    total_trades = len(df)
 
     fig.update_layout(
-        title=f'🚀 Portfolio vs BTC Comparison ({actual_days} Days)<br><span style="font-size:14px; color:#6B7280">Your P&L: ${final_portfolio_pnl:.2f} | BTC P&L: ${final_btc_pnl:.2f} | Outperformance: {outperform_text}</span>',
+        title=f'🚀 Portfolio vs BTC Comparison ({actual_days} Days)<br><span style="font-size:14px; color:#6B7280">Your Portfolio: {final_pnl_pct:.1f}% | BTC: {final_btc_pct:.1f}% | Outperformance: {outperform_text}</span>',
         plot_bgcolor='white',
         paper_bgcolor='#F9FAFB',
         xaxis=dict(
-            title='Trade Number',
-            showgrid=True,
-            gridcolor='#E5E7EB'
-        ),
-        yaxis=dict(
-            title='Cumulative P&L ($)',
+            title=f'Time ({start_date.strftime("%Y-%m-%d")} to {end_date.strftime("%Y-%m-%d")})',
             showgrid=True,
             gridcolor='#E5E7EB',
-            tickformat='$,.2f'
+            type='date'
+        ),
+        yaxis=dict(
+            title='Return (%)',
+            showgrid=True,
+            gridcolor='#E5E7EB',
+            tickformat='.1f',
+            ticksuffix='%'
         ),
         height=600,
         showlegend=True,
