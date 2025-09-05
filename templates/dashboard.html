@@ -103,6 +103,7 @@
                 </div>
             </div>
 
+            <!-- Portfolio PnL Chart -->
             <div class="row">
                 <div class="col-12">
                     <div class="chart-container">
@@ -111,7 +112,7 @@
                 </div>
             </div>
 
-            <!-- BTC Comparison Chart -->
+            <!-- BTC Dollar Comparison Chart -->
             <div class="row">
                 <div class="col-12">
                     <div class="chart-container">
@@ -119,15 +120,29 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Percentage Returns Comparison Chart -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <div id="percentageChart"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script>
-            // Render PnL Chart
+            // Render Portfolio PnL Chart
             Plotly.newPlot('pnlChart', {{ chart | safe }});
 
-            // Render BTC Comparison Chart
+            // Render BTC Dollar Comparison Chart
             {% if btc_chart %}
             Plotly.newPlot('btcCompareChart', {{ btc_chart | safe }});
+            {% endif %}
+
+            // Render Percentage Returns Comparison Chart
+            {% if percentage_chart %}
+            Plotly.newPlot('percentageChart', {{ percentage_chart | safe }});
             {% endif %}
         </script>
     </body>

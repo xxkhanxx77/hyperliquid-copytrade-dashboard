@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="PnL Dashboard")
 templates = Jinja2Templates(directory="templates")
 
-def fetch_hyperliquid_data(user_address: str, days_back: int = 30):
+def fetch_hyperliquid_data(user_address: str, days_back: int = 56):
     """Fetch trading data from Hyperliquid API"""
     end_time = int(datetime.now().timestamp() * 1000)
     start_time = end_time - (days_back * 24 * 60 * 60 * 1000)
@@ -257,6 +257,140 @@ def create_btc_compare_pnl_chart(df, days_back):
 
     return fig
 
+def create_percentage_comparison_chart(df, days_back):
+    """Create percentage returns comparison chart between portfolio and BTC"""
+    if df.empty:
+        return go.Figure().add_annotation(text="No PnL data", x=0.5, y=0.5, showarrow=False)
+
+    # Get the exact date range from the portfolio
+    start_date = df['timestamp'].min()
+    end_date = df['timestamp'].max()
+
+    print(f"🔍 Percentage comparison for period: {start_date} to {end_date}")
+
+    # Fetch BTC data for the exact same period
+    btc_data = fetch_btc_data(start_date, end_date)
+    if btc_data is None or btc_data.empty:
+        return go.Figure().add_annotation(text="No BTC data available for portfolio period", x=0.5, y=0.5, showarrow=False)
+
+    fig = go.Figure()
+
+    # Portfolio percentage returns calculation
+    # Assume starting capital (can be estimated from first few trades or use fixed amount)
+    starting_capital = 1000  # Assume $1000 starting capital
+
+    # Calculate portfolio value over time
+    portfolio_values = [starting_capital]  # Start with initial capital
+    for pnl in df['cumulative_pnl']:
+        portfolio_values.append(starting_capital + pnl)
+
+    # Calculate portfolio percentage returns
+    portfolio_pct_returns = []
+    for value in portfolio_values:
+        pct_return = ((value / starting_capital) - 1) * 100
+        portfolio_pct_returns.append(pct_return)
+
+    # Portfolio X-axis (trade numbers)
+    portfolio_x_data = list(range(len(portfolio_pct_returns)))
+
+    # BTC percentage returns calculation
+    btc_data_sorted = btc_data.sort_index()
+    first_btc_price = btc_data_sorted['close'].iloc[0]
+
+    # Calculate BTC percentage returns over time, mapped to trade times
+    btc_pct_returns = [0]  # Start at 0%
+    trade_timestamps = df['timestamp'].tolist()
+
+    for trade_time in trade_timestamps:
+        # Find the BTC price closest to this trade time
+        time_diffs = abs(btc_data_sorted.index - trade_time)
+        closest_idx = time_diffs.argmin()
+        closest_time = btc_data_sorted.index[closest_idx]
+        btc_price_at_trade = btc_data_sorted.loc[closest_time, 'close']
+
+        # Calculate percentage return from start
+        btc_pct_return = ((btc_price_at_trade / first_btc_price) - 1) * 100
+        btc_pct_returns.append(btc_pct_return)
+
+    # BTC X-axis (same as portfolio)
+    btc_x_data = list(range(len(btc_pct_returns)))
+
+    # Add Portfolio trace
+    fig.add_trace(go.Scatter(
+        x=portfolio_x_data,
+        y=portfolio_pct_returns,
+        mode='lines+markers',
+        name='Your Portfolio',
+        line=dict(color='#10B981', width=3),
+        marker=dict(size=4),
+        fill='tozeroy',
+        fillcolor='rgba(16, 185, 129, 0.1)',
+        hovertemplate='Trade #%{x}<br>Portfolio Return: %{y:.2f}%<extra></extra>'
+    ))
+
+    # Add BTC HODL trace
+    fig.add_trace(go.Scatter(
+        x=btc_x_data,
+        y=btc_pct_returns,
+        mode='lines',
+        name='BTC HODL',
+        line=dict(color='#F59E0B', width=2, dash='dash'),
+        hovertemplate='Trade #%{x}<br>BTC Return: %{y:.2f}%<extra></extra>'
+    ))
+
+    # Add zero line
+    fig.add_hline(y=0, line_dash="dot", line_color="#9CA3AF", opacity=0.7)
+
+    # Calculate final values for title
+    final_portfolio_pct = portfolio_pct_returns[-1] if portfolio_pct_returns else 0
+    final_btc_pct = btc_pct_returns[-1] if btc_pct_returns else 0
+
+    # Determine outperformance in percentage points
+    outperform = final_portfolio_pct - final_btc_pct
+    outperform_text = f"📈 +{outperform:.1f}pp" if outperform > 0 else f"📉 {outperform:.1f}pp"
+
+    # Calculate actual days between first and last trade
+    actual_days = (end_date - start_date).days
+    total_trades = len(df)
+
+    # Color for performance indicators
+    portfolio_color = "#10B981" if final_portfolio_pct >= 0 else "#EF4444"
+    btc_color = "#F59E0B" if final_btc_pct >= 0 else "#EF4444"
+
+    fig.update_layout(
+        title=f'📊 Percentage Returns Comparison ({actual_days} Days)<br><span style="font-size:14px; color:#6B7280"><span style="color:{portfolio_color}">Portfolio: {final_portfolio_pct:+.1f}%</span> | <span style="color:{btc_color}">BTC: {final_btc_pct:+.1f}%</span> | Outperformance: {outperform_text}</span>',
+        plot_bgcolor='white',
+        paper_bgcolor='#F9FAFB',
+        xaxis=dict(
+            title='Trade Number',
+            showgrid=True,
+            gridcolor='#E5E7EB'
+        ),
+        yaxis=dict(
+            title='Return (%)',
+            showgrid=True,
+            gridcolor='#E5E7EB',
+            tickformat='.1f',
+            ticksuffix='%',
+            zeroline=True,
+            zerolinecolor='#9CA3AF',
+            zerolinewidth=1
+        ),
+        height=600,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        margin=dict(l=60, r=60, t=100, b=60),
+        hovermode='x unified'
+    )
+
+    return fig
+
 def get_stats(df):
     """Get basic stats"""
     if df.empty:
@@ -279,7 +413,7 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/analyze", response_class=HTMLResponse)
-async def analyze(request: Request, user_address: str = Form(...), days_back: int = Form(30)):
+async def analyze(request: Request, user_address: str = Form(...), days_back: int = Form(56)):
     try:
         # Fetch and process data
         raw_data = fetch_hyperliquid_data(user_address, days_back)
@@ -291,15 +425,17 @@ async def analyze(request: Request, user_address: str = Form(...), days_back: in
                 "error": "No trading data found"
             })
 
-        # Create both charts
+        # Create all charts
         pnl_chart = create_pnl_chart(df, days_back)
         btc_compare_chart = create_btc_compare_pnl_chart(df, days_back)
+        percentage_chart = create_percentage_comparison_chart(df, days_back)
         stats = get_stats(df)
 
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "chart": json.dumps(pnl_chart, cls=plotly.utils.PlotlyJSONEncoder),
             "btc_chart": json.dumps(btc_compare_chart, cls=plotly.utils.PlotlyJSONEncoder),
+            "percentage_chart": json.dumps(percentage_chart, cls=plotly.utils.PlotlyJSONEncoder),
             "stats": stats,
             "user_address": user_address,
             "days_back": days_back
