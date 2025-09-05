@@ -1,0 +1,16 @@
+[project]
+name = "pnl-dashboard"
+version = "0.1.0"
+description = "Reusable P&L Analytics Dashboard with FastAPI and Plotly"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.116.1",
+    "jinja2>=3.1.6",
+    "numpy>=2.3.2",
+    "pandas>=2.3.2",
+    "plotly>=6.3.0",
+    "python-multipart>=0.0.20",
+    "requests>=2.32.5",
+    "uvicorn>=0.35.0",
+]
